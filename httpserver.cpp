@@ -33,6 +33,29 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
     return result;
 }
 
+template<class Resource>
+class ScopedResource
+{
+public:
+    using Deleter = std::function<void(Resource)>;
+    ScopedResource(Resource resource, const Deleter &deleter)
+        : m_resource(resource)
+        , m_deleter(deleter)
+    {}
+
+    auto get() const { return m_resource; }
+
+    ~ScopedResource()
+    {
+        if (m_resource) {
+            m_deleter(m_resource);
+        }
+    }
+
+private:
+    Resource m_resource;
+    Deleter m_deleter;
+};
 }
 
 HTTPServer::HTTPServer() {
@@ -59,43 +82,63 @@ void HTTPServer::run()
 {
     while (true) {
         m_clientSocket = accept(m_serverSocket, (struct sockaddr *) &m_clientAddr, &m_clientAddrLen);
+        ScopedResource<int> clientResource(m_clientSocket, &close);
         if (m_clientSocket < 0) {
             std::cerr << "Error accepting client connection" << std::endl;
             continue;
         }
 
-        char buffer[1024];
-        recv(m_clientSocket, buffer, sizeof(buffer), 0);
+        const auto buffSize = 1024;
+        char buffer[buffSize];
+        auto bytesRead = recv(m_clientSocket, buffer, buffSize, 0);
         std::istringstream request(buffer);
         std::string method, uri, protocol;
         request >> method >> uri >> protocol;
 
-        std::string contentTypeVerb = "Content-Type: ";
-        std::string contentLengthVerb = "Content-Length: ";
         if (method == "GET") {
             handleGet(uri);
         } else if (method == "POST") {
-            std::string contentType = "application/octet-stream";
-            std::string tmp;
-            std::string content;
-            while (request) {
-                std::getline(request, tmp);
-                auto contentTypePos = tmp.find(contentTypeVerb);
-                if (contentTypePos == 0) {
-                    contentType = trim(tmp.substr(contentTypeVerb.size()));
-                } else if (tmp.find(contentLengthVerb) == 0) {
-                    while (request.get() != '\n');
-                    std::getline(request, content);
-                    break;
-                }
-            }
-            handlePost(uri, content, contentType);
+            parsePost(request, uri);
         } else if (method == "DELETE") {
             handleDelete(uri);
         }
-
-        close(m_clientSocket);
     }
+}
+
+void HTTPServer::parsePost(std::istringstream &request, const std::string &uri)
+{
+    std::string contentTypeVerb = "Content-Type: ";
+    std::string contentLengthVerb = "Content-Length: ";
+    int contentLength = 0;
+    std::string contentType = "application/octet-stream";
+    std::string content;
+    std::string emptyLine;
+    std::getline(request, emptyLine);
+    while (request) {
+        std::string line;
+        std::getline(request, line);
+        if (line.find(contentTypeVerb) == 0) {
+            contentType = trim(line.substr(contentTypeVerb.size()));
+        } else if (line.find(contentLengthVerb) == 0) {
+            const auto contentLengthStr = trim(line.substr(contentLengthVerb.size()));
+            contentLength = std::stoi(contentLengthStr);
+        } else if (line == "\r") {
+            break;
+        }
+    }
+
+    std::getline(request, content, '\0');
+    if (contentLength > content.size()) {
+        const auto buffSize = 1024;
+        char buffer[buffSize];
+        contentLength -= content.size();
+        while (contentLength > 0) {
+            auto bytesRead = recv(m_clientSocket, buffer, buffSize, 0);
+            contentLength -= bytesRead;
+            content.append(buffer, bytesRead);
+        }
+    }
+    handlePost(uri, content, contentType);
 }
 
 void HTTPServer::handleGet(const std::string& uri) {

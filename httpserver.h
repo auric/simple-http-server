@@ -4,6 +4,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 
+#include <sstream>
 #include <string>
 #include <unordered_map>
 
@@ -14,7 +15,7 @@ public:
     void run();
 
 private:
-    void handleRequest();
+    void parsePost(std::istringstream &request, const std::string &uri);
     void handleGet(const std::string& uri);
     void handlePost(const std::string& uri, const std::string& body, const std::string& contentType);
     void handleDelete(const std::string& uri);
