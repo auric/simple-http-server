@@ -4,21 +4,18 @@
 #include <netinet/in.h>
 #include <unistd.h>
 
-#include <sstream>
+#include <memory>
 #include <string>
 #include <unordered_map>
+
+#include "handler.h"
 
 class HTTPServer {
 public:
     HTTPServer();
 
     void run();
-
-private:
-    void parsePost(std::istringstream &request, const std::string &uri);
-    void handleGet(const std::string& uri);
-    void handlePost(const std::string& uri, const std::string& body, const std::string& contentType);
-    void handleDelete(const std::string& uri);
+    void appendHandler(const std::string &method, std::unique_ptr<Handler> handler);
 
 private:
     int m_serverSocket;
@@ -26,7 +23,6 @@ private:
     struct sockaddr_in m_serverAddr;
     struct sockaddr_in m_clientAddr;
     socklen_t m_clientAddrLen;
-    std::unordered_map<std::string, std::pair<std::string, std::string>> m_dataMap;
-
+    std::unordered_map<std::string, std::unique_ptr<Handler>> m_handlers;
 };
 

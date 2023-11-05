@@ -6,7 +6,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(simple-http-server main.cpp
-    httpserver.h httpserver.cpp)
+    httpserver.h httpserver.cpp
+    handler.h
+    gethandler.h gethandler.cpp
+    database.h database.cpp
+    posthandler.h posthandler.cpp
+    utils.h
+    utils.cpp
+    deletehandler.h deletehandler.cpp)
 
 include(GNUInstallDirs)
 install(TARGETS simple-http-server
