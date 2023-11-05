@@ -11,8 +11,17 @@ GetHandler::GetHandler(Database &db)
 
 void GetHandler::process(int clientSocket, std::istringstream &stream, const std::string &uri)
 {
+    const std::string versionStr = "?version=";
+    auto versionPos = uri.find(versionStr);
+    std::optional<int> version;
+    std::string originalUri = uri;
+    if (versionPos != std::string::npos) {
+        auto versionNumStr = uri.substr(versionPos + versionStr.size());
+        version = std::stoi(versionNumStr);
+        originalUri = uri.substr(0, versionPos);
+    }
     std::string response;
-    auto res = m_db.get(uri);
+    auto res = m_db.get(originalUri, version);
     if (!res) {
         response = "HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n";
         send(clientSocket, response.c_str(), response.size(), 0);

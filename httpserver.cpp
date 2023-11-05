@@ -78,7 +78,7 @@ void HTTPServer::run()
         }
 
         const auto buffSize = 1024;
-        char buffer[buffSize];
+        char buffer[buffSize] = {};
         auto bytesRead = recv(m_clientSocket, buffer, buffSize, 0);
         std::istringstream request(buffer);
         std::string method, uri, protocol;

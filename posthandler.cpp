@@ -36,9 +36,9 @@ void PostHandler::process(int clientSocket, std::istringstream &request, const s
         --contentLength;
     }
     if (contentLength > content.size()) {
-        const auto buffSize = 1024;
-        char buffer[buffSize];
         contentLength -= content.size();
+        const auto buffSize = 1024;
+        char buffer[buffSize] = {};
         while (contentLength > 0) {
             auto bytesRead = recv(clientSocket, buffer, buffSize, 0);
             contentLength -= bytesRead;
