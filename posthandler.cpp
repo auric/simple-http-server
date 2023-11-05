@@ -31,7 +31,10 @@ void PostHandler::process(int clientSocket, std::istringstream &request, const s
         }
     }
 
-    std::getline(request, content, '\0');
+    while (contentLength > 0) {
+        content.push_back(request.get());
+        --contentLength;
+    }
     if (contentLength > content.size()) {
         const auto buffSize = 1024;
         char buffer[buffSize];
